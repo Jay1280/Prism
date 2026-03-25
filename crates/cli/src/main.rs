@@ -42,6 +42,10 @@ struct Cli {
     /// Enable verbose logging. Repeat for more detail.
     #[arg(long, short, action = ArgAction::Count, global = true)]
     verbose: u8,
+
+    /// Override RPC URL (e.g. http://localhost:8000)
+    #[arg(long, global = true, value_parser = validate_url)]
+    rpc_url: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -113,7 +117,13 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // Resolve network configuration
-    let network = prism_core::network::config::resolve_network(&cli.network);
+    let mut network = prism_core::network::config::resolve_network(&cli.network);
+
+    // Override RPC URL if provided
+    if let Some(ref rpc_url) = cli.rpc_url {
+        network.rpc_url = rpc_url.clone();
+    }
+
     tracing::debug!(
         resolved_network = ?network.network,
         rpc_url = %network.rpc_url,
@@ -151,6 +161,12 @@ fn build_log_filter(verbose: u8) -> EnvFilter {
         .parse_lossy("")
         .add_directive(format!("prism={prism_level}").parse().expect("valid directive"))
         .add_directive(format!("prism_core={prism_level}").parse().expect("valid directive"))
+}
+
+fn validate_url(value: &str) -> Result<String, String> {
+    url::Url::parse(value)
+        .map(|_| value.to_string())
+        .map_err(|_| format!("Invalid URL: {value}"))
 }
 
 #[cfg(test)]
