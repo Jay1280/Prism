@@ -15,21 +15,18 @@ description = "Soroban Transaction Debugger — From cryptic error to root cause
 
 [workspace.dependencies]
 # Stellar / Soroban — Critical Path
-stellar-xdr = { version = "25.0.0", features = ["std", "serde"] }
+stellar-xdr = { version = "21.2.0", features = ["std", "serde"] }
 stellar-strkey = "0.0.9"
 soroban-env-host = "21"
 soroban-spec = "21"
 soroban-spec-tools = "21.5.3"
 
 # Networking & Serialization
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "gzip"] }
 tokio = { version = "1", features = ["full"] }
-tokio-tungstenite = "0.24"
-futures-util = { version = "0.3.31", default-features = false, features = ["sink", "std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
-base64 = "0.22"
 
 # CLI Framework & Output
 clap = { version = "4", features = ["derive", "env", "color"] }
@@ -58,6 +55,3 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Shared internal crates
 prism-core = { path = "crates/core" }
-
-[patch.crates-io]
-futures-macro = { path = "patches/futures-macro-0.3.31" }

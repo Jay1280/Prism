@@ -11,55 +11,33 @@
 //!   prism export <tx-hash>       — Export as regression test
 //!   prism db update              — Update taxonomy database
 //!   prism clean                  — Clear local cache data
+//!   prism serve                  — Launch Web UI dashboard
 
 mod commands;
 mod config;
 mod output;
 mod tui;
 
-use clap::{ArgAction, CommandFactory, FromArgMatches, Parser, Subcommand};
+use clap::{ ArgAction, Parser, Subcommand };
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-#[derive(clap::ValueEnum, Clone, Debug)]
-pub enum Network {
-    Mainnet,
-    Testnet,
-    Futurenet,
-}
-
-impl std::fmt::Display for Network {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Self::Mainnet => "mainnet",
-            Self::Testnet => "testnet",
-            Self::Futurenet => "futurenet",
-        };
-        write!(f, "{}", s)
-    }
-}
-
 /// Prism — From cryptic error to root cause in one command.
 #[derive(Parser)]
-#[command(
-    name = "prism",
-    disable_version_flag = true,
-    about,
-    long_about = None
-)]
+#[command(name = "prism", version, about, long_about = None)]
 #[command(propagate_version = true)]
 struct Cli {
     /// Subcommand to execute.
     #[command(subcommand)]
     command: Commands,
 
-    /// Output format: human, json, compact, or short.
-    #[arg(long, default_value = "human", value_parser = ["human", "json", "compact", "short"], global = true)]
+    /// Output format: human, json, compact.
+    #[arg(long, default_value = "human", global = true)]
     output: String,
 
-    /// Network: mainnet, testnet, or futurenet.
+    /// Network: mainnet, testnet, futurenet, or a custom RPC URL.
     #[arg(long, short, default_value = "testnet", global = true)]
-    network: Network,
+    network: String,
 
     /// Enable verbose logging. Repeat for more detail.
     #[arg(long, short, action = ArgAction::Count, global = true)]
@@ -100,7 +78,7 @@ enum Commands {
     #[command(subcommand_help_heading = "Development Tools")]
     Export(commands::export::ExportArgs),
 
-    /// Start WebSocket server for streaming trace updates.
+    /// Launch Web UI dashboard.
     #[command(subcommand_help_heading = "Development Tools")]
     Serve(commands::serve::ServeArgs),
 
@@ -115,12 +93,11 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let version: &'static str = Box::leak(build_version().into_boxed_str());
-    let matches = Cli::command().version(version).get_matches();
-    let cli = Cli::from_arg_matches(&matches)?;
+    let cli = Cli::parse();
 
     // Initialize logging before resolving the network or dispatching commands.
-    tracing_subscriber::fmt()
+    tracing_subscriber
+        ::fmt()
         .with_env_filter(build_log_filter(cli.verbose))
         .with_writer(std::io::stderr)
         .with_file(cli.verbose > 1)
@@ -136,7 +113,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // Resolve network configuration
-    let network = prism_core::network::config::resolve_network(&cli.network.to_string());
+    let network = prism_core::network::config::resolve_network(&cli.network);
     tracing::debug!(
         resolved_network = ?network.network,
         rpc_url = %network.rpc_url,
@@ -156,19 +133,10 @@ async fn main() -> anyhow::Result<()> {
         Commands::Export(args) => commands::export::run(args, &network).await?,
         Commands::Clean(args) => commands::clean::run(args).await?,
         Commands::Db(args) => commands::db::run(args).await?,
-        Commands::Serve(args) => commands::serve::run(args, &network).await?,
+        Commands::Serve(args) => commands::serve::run(args).await?,
     }
 
     Ok(())
-}
-
-fn build_version() -> String {
-    format!(
-        "prism {} (build: {}) | Soroban Protocol: {}",
-        prism_core::VERSION,
-        BUILD_HASH,
-        prism_core::SOROBAN_PROTOCOL_VERSION
-    )
 }
 
 fn build_log_filter(verbose: u8) -> EnvFilter {
@@ -181,16 +149,8 @@ fn build_log_filter(verbose: u8) -> EnvFilter {
     EnvFilter::builder()
         .with_default_directive(LevelFilter::WARN.into())
         .parse_lossy("")
-        .add_directive(
-            format!("prism={prism_level}")
-                .parse()
-                .expect("valid directive"),
-        )
-        .add_directive(
-            format!("prism_core={prism_level}")
-                .parse()
-                .expect("valid directive"),
-        )
+        .add_directive(format!("prism={prism_level}").parse().expect("valid directive"))
+        .add_directive(format!("prism_core={prism_level}").parse().expect("valid directive"))
 }
 
 #[cfg(test)]
@@ -207,23 +167,15 @@ mod tests {
     fn parses_repeated_verbose_flags_as_trace() {
         let cli = Cli::try_parse_from(["prism", "-vv", "db", "update"]).expect("cli should parse");
         assert_eq!(cli.verbose, 2);
-        assert!(build_log_filter(cli.verbose)
-            .to_string()
-            .contains("prism=trace"));
+        assert!(build_log_filter(cli.verbose).to_string().contains("prism=trace"));
     }
 
     #[test]
     fn parses_long_verbose_flag_after_subcommand() {
-        let cli = Cli::try_parse_from(["prism", "decode", "--verbose", "abc123"])
-            .expect("cli should parse");
+        let cli = Cli::try_parse_from(["prism", "decode", "--verbose", "abc123"]).expect(
+            "cli should parse"
+        );
         assert_eq!(cli.verbose, 1);
-    }
-
-    #[test]
-    fn parses_short_output_alias() {
-        let cli = Cli::try_parse_from(["prism", "--output", "short", "decode", "abc123"])
-            .expect("cli should parse");
-        assert_eq!(cli.output, "short");
     }
 
     #[test]
@@ -235,15 +187,5 @@ mod tests {
         assert!(warn.contains("prism=warn"));
         assert!(debug.contains("prism=debug"));
         assert!(trace.contains("prism=trace"));
-        assert!(trace.contains("prism_core=trace"));
-    }
-
-    #[test]
-    fn version_string_includes_build_hash_and_protocol() {
-        let version = build_version();
-
-        assert!(version.contains(prism_core::VERSION));
-        assert!(version.contains(BUILD_HASH));
-        assert!(version.contains(&prism_core::SOROBAN_PROTOCOL_VERSION.to_string()));
     }
 }
