@@ -8,6 +8,7 @@ use prism_core::types::{
 pub mod compact;
 pub mod human;
 pub mod json;
+pub mod renderers;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputMode {
