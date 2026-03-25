@@ -3,10 +3,10 @@
 //! Provides error classification, contract error resolution, diagnostic event
 //! analysis, context enrichment, and report generation.
 
-pub mod host_error;
+pub mod context;
 pub mod contract_error;
 pub mod diagnostic;
-pub mod context;
+pub mod host_error;
 pub mod report;
 
 use crate::types::error::PrismResult;

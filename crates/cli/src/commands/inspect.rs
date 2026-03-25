@@ -6,10 +6,15 @@ use prism_core::types::config::NetworkConfig;
 #[derive(Args)]
 pub struct InspectArgs {
     /// Transaction hash to inspect.
+    #[arg(value_name = "TX_HASH")]
     pub tx_hash: String,
     /// Index of the specific operation to focus on (0-based).
     #[arg(long)]
     pub op_index: Option<usize>,
+
+    /// Show detailed fee breakdown including bid vs charged values.
+    #[arg(long)]
+    pub fee_stats: bool,
 }
 
 pub async fn run(
@@ -29,11 +34,8 @@ pub async fn run(
 
     spinner.finish_and_clear();
 
-    // Inspect shows the full context including decoded args, auth, resources, fees
-    match output_format {
-        "json" => crate::output::json::print_report(&report)?,
-        _ => crate::output::human::print_report(&report)?,
-    }
+    // Inspect shows the full context including decoded args, auth, resources, fees.
+    crate::output::print_diagnostic_report(&report, output_format)?;
 
     Ok(())
 }
