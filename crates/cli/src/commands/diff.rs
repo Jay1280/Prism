@@ -12,7 +12,7 @@ pub struct DiffArgs {
 pub async fn run(
     args: DiffArgs,
     network: &NetworkConfig,
-    output_format: &str,
+    output_format: &str
 ) -> anyhow::Result<()> {
     let progress = indicatif::ProgressBar::new_spinner();
     progress.set_message("Computing state diff...");
