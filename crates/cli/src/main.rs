@@ -21,7 +21,23 @@ use clap::{ArgAction, CommandFactory, FromArgMatches, Parser, Subcommand};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber::EnvFilter;
 
-const BUILD_HASH: &str = env!("PRISM_BUILD_HASH");
+#[derive(clap::ValueEnum, Clone, Debug)]
+pub enum Network {
+    Mainnet,
+    Testnet,
+    Futurenet,
+}
+
+impl std::fmt::Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Self::Mainnet => "mainnet",
+            Self::Testnet => "testnet",
+            Self::Futurenet => "futurenet",
+        };
+        write!(f, "{}", s)
+    }
+}
 
 /// Prism — From cryptic error to root cause in one command.
 #[derive(Parser)]
@@ -41,9 +57,9 @@ struct Cli {
     #[arg(long, default_value = "human", value_parser = ["human", "json", "compact", "short"], global = true)]
     output: String,
 
-    /// Network: mainnet, testnet, futurenet, or a custom RPC URL.
+    /// Network: mainnet, testnet, or futurenet.
     #[arg(long, short, default_value = "testnet", global = true)]
-    network: String,
+    network: Network,
 
     /// Enable verbose logging. Repeat for more detail.
     #[arg(long, short, action = ArgAction::Count, global = true)]
@@ -99,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     // Resolve network configuration
-    let network = prism_core::network::config::resolve_network(&cli.network);
+    let network = prism_core::network::config::resolve_network(&cli.network.to_string());
     tracing::debug!(
         resolved_network = ?network.network,
         rpc_url = %network.rpc_url,
