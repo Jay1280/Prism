@@ -1,8 +1,7 @@
-//! `prism diff` — Show state diff (before/after) for a transaction.
+//! `prism diff` - Show state diff (before/after) for a transaction.
 
 use clap::Args;
 use prism_core::types::config::NetworkConfig;
-use crate::output::renderers;
 
 #[derive(Args)]
 pub struct DiffArgs {
@@ -23,13 +22,7 @@ pub async fn run(
 
     progress.finish_and_clear();
 
-    match output_format {
-        "json" => println!("{}", serde_json::to_string_pretty(&trace.state_diff)?),
-        _ => {
-            println!("{}", colored::Colorize::bold("State Diff"));
-            println!("{}", renderers::render_state_diff_table(&trace.state_diff));
-        }
-    }
+    crate::output::print_state_diff(&trace.state_diff, output_format)?;
 
     Ok(())
 }
