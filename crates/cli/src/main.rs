@@ -10,6 +10,7 @@
 //!   prism whatif <tx-hash>       — Re-simulate with modifications
 //!   prism export <tx-hash>       — Export as regression test
 //!   prism db update              — Update taxonomy database
+//!   prism clean                  — Clear local cache data
 
 mod commands;
 mod output;
@@ -57,6 +58,8 @@ enum Commands {
     Whatif(commands::whatif::WhatifArgs),
     /// Export debug session as a regression test.
     Export(commands::export::ExportArgs),
+    /// Clear local cache data.
+    Clean(commands::clean::CleanArgs),
     /// Manage the error taxonomy database.
     Db(commands::db::DbArgs),
 }
@@ -84,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
         Commands::Replay(args) => commands::replay::run(args, &network).await?,
         Commands::Whatif(args) => commands::whatif::run(args, &network, &cli.output).await?,
         Commands::Export(args) => commands::export::run(args, &network).await?,
+        Commands::Clean(args) => commands::clean::run(args).await?,
         Commands::Db(args) => commands::db::run(args).await?,
     }
 
