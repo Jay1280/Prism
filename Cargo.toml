@@ -22,10 +22,10 @@ soroban-spec = "21"
 soroban-spec-tools = "21.5.3"
 
 # Networking & Serialization
-reqwest = { version = "0.12", features = ["json", "gzip"] }
+reqwest = { version = "0.12", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.24"
-futures-util = "0.3"
+futures-util = { version = "0.3.31", default-features = false, features = ["sink", "std"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
@@ -58,3 +58,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Shared internal crates
 prism-core = { path = "crates/core" }
+
+[patch.crates-io]
+futures-macro = { path = "patches/futures-macro-0.3.31" }

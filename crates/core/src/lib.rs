@@ -33,4 +33,4 @@ pub use types::report::DiagnosticReport;
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Soroban ledger protocol version supported by the linked core crates.
-pub const SOROBAN_PROTOCOL_VERSION: u32 = soroban_env_host::meta::INTERFACE_VERSION.protocol;
+pub const SOROBAN_PROTOCOL_VERSION: u64 = soroban_env_host::meta::INTERFACE_VERSION;
