@@ -12,6 +12,7 @@
 //!   prism db update              — Update taxonomy database
 
 mod commands;
+mod config;
 mod output;
 mod tui;
 
